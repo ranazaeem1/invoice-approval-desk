@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mini invoice approval desk for accounts-payable reviewers to review incoming invoices, spot duplicates, and approve or reject quickly.">
+  <title>Invoice Approval Desk</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon" aria-hidden="true">🧾</div>
+        <div>
+          <h1 class="brand-title">Invoice Approval Desk</h1>
+          <p class="brand-subtitle">Accounts Payable • Review incoming invoices and eliminate duplicate payouts</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-refresh" class="btn-icon" type="button" title="Refresh queue">
+          <span aria-hidden="true">🔄</span>
+          <span>Refresh</span>
+        </button>
+        <button id="btn-theme-toggle" class="btn-icon" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <span id="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <nav class="tabs-nav" role="tablist" aria-label="Invoice status tabs">
+      <button 
+        id="tab-processing" 
+        class="tab-btn" 
+        role="tab" 
+        aria-selected="true" 
+        data-tab="processing"
+        type="button"
+      >
+        <span>Processing</span>
+        <span class="tab-badge" id="badge-processing">0</span>
+      </button>
+      <button 
+        id="tab-needs_review" 
+        class="tab-btn" 
+        role="tab" 
+        aria-selected="false" 
+        data-tab="needs_review"
+        type="button"
+      >
+        <span>Needs review</span>
+        <span class="tab-badge" id="badge-needs_review">0</span>
+      </button>
+      <button 
+        id="tab-approved_rejected" 
+        class="tab-btn" 
+        role="tab" 
+        aria-selected="false" 
+        data-tab="approved_rejected"
+        type="button"
+      >
+        <span>Approved / rejected</span>
+        <span class="tab-badge" id="badge-approved_rejected">0</span>
+      </button>
+    </nav>
+
+    <!-- Main Content Area: Master List + Detail Panel -->
+    <main class="main-content">
+      <!-- Invoices List Card -->
+      <section class="content-card" aria-label="Invoices list card">
+        <div id="invoices-container">
+          <div class="state-container">
+            <div class="spinner"></div>
+            <div class="state-title">Loading invoices...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Detail Panel -->
+      <aside class="detail-panel" id="detail-panel" aria-label="Invoice details">
+        <div class="state-container">
+          <div class="state-icon">📄</div>
+          <div class="state-title">No invoice selected</div>
+          <div class="state-desc">Select an invoice from the queue to view its details, review duplicate alerts, or approve/reject.</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
