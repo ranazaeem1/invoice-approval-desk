@@ -73,3 +73,4 @@ Thumbs.db
 .tmp/
 *.tmp
 *.temp
+test-clone/

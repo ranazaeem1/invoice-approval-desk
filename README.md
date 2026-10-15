@@ -4,7 +4,7 @@ A small web app for reviewing invoices. A reviewer can see what has come in, spo
 
 ## Run it
 
-Needs Node 18 or newer.
+Needs Node 18 or newer. Tested with a current Node LTS version (20 or 22).
 
 ```bash
 npm install
