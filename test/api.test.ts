@@ -213,5 +213,16 @@ describe('Invoice Approval Desk API', () => {
       const body = (await res.json()) as { error: string };
       assert.equal(body.error, 'Invoice not found');
     });
+
+    it('returns 400 when sending a malformed JSON body', async () => {
+      const res = await fetch(`${baseUrl}/api/invoices/1/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"status": "approved", malformed}',
+      });
+      assert.equal(res.status, 400);
+      const body = (await res.json()) as { error: string };
+      assert.equal(body.error, 'Invalid JSON body');
+    });
   });
 });

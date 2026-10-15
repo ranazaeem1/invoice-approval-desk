@@ -111,9 +111,12 @@ export function createApp(db: Database.Database = getDatabase()): express.Applic
     res.status(404).json({ error: 'API endpoint not found' });
   });
 
-  // Generic JSON error handler
-  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    res.status(500).json({ error: err.message || 'Internal server error' });
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    if (err.type === 'entity.parse.failed') {
+      res.status(400).json({ error: 'Invalid JSON body' });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
   });
 
   return app;
