@@ -1,104 +1,92 @@
 # Invoice approval desk
 
-A lightweight internal web application for accounts-payable reviewers to inspect incoming invoices, detect duplicate billing, and execute final approval or rejection decisions.
+A small web app for reviewing invoices. A reviewer can see what has come in, spot duplicates, and approve or reject each invoice. Built with TypeScript, Express and SQLite.
 
 ## Run it
-Requires Node 18+.
+
+Needs Node 18 or newer.
 
 ```bash
 npm install
 npm run dev     # http://localhost:3000
-npm run seed    # reset sample data
-npm test
 ```
 
-Additional scripts:
-- `npm run build`: Compiles TypeScript to `dist/`.
-- `npm start`: Runs the compiled production server.
+On the first start the app creates the database and adds 6 sample invoices, one of them a duplicate.
 
-## UI
-- **Three queue tabs with live counts:**
-  - **Processing:** Invoices ready for initial review.
-  - **Needs review:** Invoices flagged for attention (e.g., duplicate submissions or amounts exceeding normal thresholds).
-  - **Approved / rejected:** Closed items where a final decision has been recorded.
-- **Master list & detail view:** Selecting any invoice opens a comprehensive detail view displaying vendor name, invoice number, formatted currency amount, issue date, status badge, duplicate relationship, reviewer note, and last updated timestamp.
-- **Duplicate warning:** Invoices flagged as duplicates display a prominent badge in the list and an alert banner in the detail panel that explicitly names the original invoice (vendor, invoice number, and amount).
-- **Approve and Reject controls:**
-  - Active only for invoices in `processing` and `needs_review` statuses.
-  - Reviewers can optionally append context notes before submitting decisions.
-  - Once approved or rejected, action buttons are replaced by a permanent final decision badge.
-- **User experience & accessibility:**
-  - Dedicated loading, empty, and error states.
-  - Non-intrusive toast notifications on successful actions or errors.
-  - Seamless dark mode / light mode toggle with `localStorage` persistence and OS preference detection.
-  - Full keyboard navigation and accessible focus indicators.
+Other commands:
+
+- `npm run seed` wipes the data and loads the 6 samples again
+- `npm test` runs the tests
+- `npm run build` then `npm start` runs the compiled version
+
+## How it works
+
+- There are three tabs: Processing, Needs review, and Approved / rejected. Each tab shows how many invoices it has.
+- Click an invoice to see its details on the right.
+- A duplicate has a red "Duplicate" tag, and its details show a warning with the original invoice, for example "Invoice #2 (BP-2290)".
+- Approve and Reject save straight to the database. You can type a reviewer note first, but it is optional.
+- Once an invoice is approved or rejected it is final, and the buttons are replaced by a short message.
+- "Add invoice" opens a form for vendor, invoice number, amount and issue date. If an invoice with the same vendor, number and amount already exists, the new one is marked as a duplicate and goes to Needs review. Otherwise it goes to Processing.
+- The page has loading, empty and error states.
 
 ## API
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/invoices?status=a,b` | List invoices ordered by `issue_date` descending; optional comma-separated status filter. |
-| `GET` | `/api/invoices/:id` | Retrieve a single invoice by ID. |
-| `PATCH` | `/api/invoices/:id/status` | Update invoice status (`{ "status": "approved", "note": "optional" }`). |
 
-### Error codes
-- `400 Bad Request`: Invalid status filter, invalid request payload, malformed ID, or invalid note data type.
-- `404 Not Found`: Requested invoice ID does not exist.
-- `409 Conflict`: Attempted state transition is disallowed by transition rules (e.g., modifying an already approved or rejected invoice).
+| Method | Path | What it does |
+| --- | --- | --- |
+| GET | `/api/invoices?status=a,b` | List invoices, optionally filtered by status |
+| GET | `/api/invoices/:id` | Get one invoice |
+| POST | `/api/invoices` | Create an invoice: `vendor`, `invoice_number`, `amount_cents`, `issue_date` |
+| PATCH | `/api/invoices/:id/status` | Change status: `{ "status": "approved", "note": "optional" }` |
+
+Errors are returned as `{ "error": "message" }`:
+
+- 400: bad input, unknown status, bad id or invalid JSON
+- 404: invoice not found
+- 409: that status change is not allowed
 
 ## Schema
-### Table: `invoices`
+
+Table `invoices`:
+
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | INTEGER PK AUTOINCREMENT | Unique invoice identifier |
-| `vendor` | TEXT NOT NULL | Vendor name |
-| `invoice_number` | TEXT NOT NULL | Vendor invoice identifier |
-| `amount_cents` | INTEGER NOT NULL, CHECK >= 0 | Amount in cents (no floats) |
-| `currency` | TEXT NOT NULL DEFAULT 'USD' | Currency code |
-| `issue_date` | TEXT NOT NULL | ISO date string (YYYY-MM-DD) |
-| `status` | TEXT NOT NULL DEFAULT 'processing' | CHECK constraint in the 4 allowed statuses |
-| `duplicate_of` | INTEGER NULL | Foreign key referencing `invoices(id)` |
-| `note` | TEXT NULL | Reviewer notes or remarks |
-| `created_at` | TEXT NOT NULL DEFAULT now | Timestamp recorded at creation |
-| `updated_at` | TEXT NOT NULL DEFAULT now | Timestamp updated on every status modification |
+| id | INTEGER | primary key |
+| vendor | TEXT | required |
+| invoice_number | TEXT | required |
+| amount_cents | INTEGER | required, 0 or more |
+| currency | TEXT | default `USD` |
+| issue_date | TEXT | `YYYY-MM-DD` |
+| status | TEXT | one of the four statuses below |
+| duplicate_of | INTEGER | id of the original invoice, if this is a duplicate |
+| note | TEXT | reviewer note |
+| created_at, updated_at | TEXT | `updated_at` changes whenever the status changes |
 
-Indexes:
-- `idx_invoices_status` on `status`
-- `idx_invoices_vendor_number_amount` on `(vendor, invoice_number, amount_cents)`
+There is an index on `status` for the tabs, and one on vendor, invoice number and amount for finding duplicates.
 
 ## Statuses
-```
-             ┌─────────────────────────────┐
-             │         processing          │
-             └──────────────┬──────────────┘
-                            │
-               ┌────────────┴────────────┐
-               ▼                         ▼
-      ┌─────────────────┐       ┌─────────────────┐
-      │  needs_review   │       │    approved     │ (final)
-      └────────┬────────┘       └─────────────────┘
-               │                         ▲
-               ├─────────────────────────┘
-               ▼
-      ┌─────────────────┐
-      │    rejected     │ (final)
-      └─────────────────┘
-```
 
-- Allowed transitions:
-  - `processing` ➔ `needs_review`, `approved`, `rejected`
-  - `needs_review` ➔ `approved`, `rejected`
-  - `approved` ➔ *None (terminal)*
-  - `rejected` ➔ *None (terminal)*
-- Enforced at both the REST API layer and database constraints. Any illegal transition attempt yields an immediate `409 Conflict`.
+- `processing`: new, nobody has looked at it yet
+- `needs_review`: a person should check it, for example a duplicate
+- `approved` and `rejected`: final
+
+Allowed changes:
+
+- processing to needs_review, approved or rejected
+- needs_review to approved or rejected
+- approved and rejected cannot change
+
+The API enforces these rules (the `TRANSITIONS` map in `src/db.ts`) and returns 409 for anything else. The database only checks that the status is one of the four valid values.
 
 ## Design decisions
-- **Why SQLite (`better-sqlite3`):** It provides zero-configuration, synchronous, high-throughput persistence without requiring external database services or network overhead. With foreign keys and WAL mode enabled, it guarantees ACID compliance and immediate read-your-writes consistency.
-- **How duplicates are detected and why flagged rather than auto-rejected:** A duplicate is identified when an incoming invoice shares the same vendor, invoice number, and amount cents as an existing record. Flagging invoices to `needs_review` rather than auto-rejecting preserves reviewer discretion. Legitimate resubmissions (such as corrected tax calculations or vendor re-issuances) can be examined with full context rather than silently dropped.
-- **Why money is stored in cents:** IEEE 754 floating-point representations are prone to rounding errors (e.g. `0.1 + 0.2 !== 0.3`). Storing currency as non-negative integer cents eliminates fractional rounding bugs and ensures exact arithmetic across storage, validation, and presentation.
+
+- **SQLite:** nothing to install, so anyone can clone and run it. The schema would work on PostgreSQL with small changes.
+- **Duplicates are flagged, not rejected:** a repeated invoice could be a real double charge or a corrected resubmission. A person should decide, so it goes to Needs review with a link to the original.
+- **Money in cents:** whole numbers avoid the rounding errors you get with decimals. The form takes dollars and converts.
+- **Rules in the API:** the buttons are hidden for final invoices, but the API checks as well, so the rules still hold if someone calls it directly.
 
 ## Not included
-- User authentication and role-based access control (RBAC).
-- File upload handling and PDF invoice OCR extraction.
-- Batch multi-select approval/rejection operations.
-- Historical audit event ledger table.
-- Webhook notifications and automated vendor email alerts.
+
+- Editing or deleting invoices
+- Login and user roles
+- Pagination
+- A history of who made each decision
