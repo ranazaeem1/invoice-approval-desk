@@ -15,7 +15,7 @@ function formatMoney(cents, currency = 'USD') {
 }
 
 function formatDate(str) {
-  if (!str) return '—';
+  if (!str) return '';
   if (str.length === 10) {
     const [y, m, d] = str.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -31,7 +31,7 @@ function showToast(message, type = 'success') {
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span><span>${message}</span>`;
+  toast.textContent = message;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -75,7 +75,6 @@ function renderInvoicesTable() {
     const labels = { processing: 'Processing', needs_review: 'Needs review', approved_rejected: 'Approved / rejected' };
     container.innerHTML = `
       <div class="state-container">
-        <div class="state-icon">📋</div>
         <div class="state-title">No invoices in ${labels[currentTab]}</div>
         <div class="state-desc">There are currently no items under this tab.</div>
       </div>`;
@@ -104,7 +103,7 @@ function renderInvoicesTable() {
               <td class="amount-cell">${formatMoney(inv.amount_cents, inv.currency)}</td>
               <td class="date-cell">${formatDate(inv.issue_date)}</td>
               <td><span class="badge badge-${inv.status}">${STATUS_LABELS[inv.status] || inv.status}</span></td>
-              <td>${inv.duplicate_of ? '<span class="badge badge-duplicate">Duplicate</span>' : '—'}</td>
+              <td>${inv.duplicate_of ? '<span class="badge badge-duplicate">Duplicate</span>' : ''}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -129,7 +128,6 @@ function renderDetailPanel() {
   if (!selectedInvoiceId) {
     panel.innerHTML = `
       <div class="state-container">
-        <div class="state-icon">📄</div>
         <div class="state-title">No invoice selected</div>
         <div class="state-desc">Select an invoice from the queue to view its details, review duplicate alerts, or approve/reject.</div>
       </div>`;
@@ -140,7 +138,6 @@ function renderDetailPanel() {
   if (!invoice) {
     panel.innerHTML = `
       <div class="state-container">
-        <div class="state-icon">❓</div>
         <div class="state-title">Invoice not found</div>
       </div>`;
     return;
@@ -151,8 +148,8 @@ function renderDetailPanel() {
   const canAction = invoice.status === 'processing' || invoice.status === 'needs_review';
 
   const origInfo = original
-    ? `original invoice #${esc(original.invoice_number)} (${esc(original.vendor)}, ${formatMoney(original.amount_cents, original.currency)})`
-    : `original invoice #${invoice.duplicate_of}`;
+    ? `Invoice #${original.id} (${esc(original.invoice_number)})`
+    : `Invoice #${invoice.duplicate_of}`;
 
   panel.innerHTML = `
     <div class="detail-header">
@@ -165,7 +162,6 @@ function renderDetailPanel() {
 
     ${isDuplicate ? `
       <div class="duplicate-banner" id="duplicate-warning">
-        <div class="duplicate-banner-icon">⚠️</div>
         <div>
           <strong>Duplicate Invoice Warning</strong>
           <div>This invoice appears to be a duplicate of ${origInfo}. Verify records before approving.</div>
@@ -188,11 +184,11 @@ function renderDetailPanel() {
       ${isDuplicate ? `
         <div class="detail-field">
           <span class="field-label">Duplicate of</span>
-          <span class="field-value" style="color: var(--danger);">Invoice #${invoice.duplicate_of}</span>
+          <span class="field-value" style="color: var(--danger);">${origInfo}</span>
         </div>` : ''}
       <div class="detail-field">
         <span class="field-label">Note</span>
-        <span class="field-value">${invoice.note ? esc(invoice.note) : '—'}</span>
+        <span class="field-value">${invoice.note ? esc(invoice.note) : 'No note'}</span>
       </div>
       <div class="detail-field">
         <span class="field-label">Last Updated</span>
@@ -205,12 +201,11 @@ function renderDetailPanel() {
         <label for="action-note-input" class="action-note-label">Reviewer Note (optional)</label>
         <textarea id="action-note-input" class="action-note-input" placeholder="Add any internal context or reasoning for this decision...">${invoice.note ? esc(invoice.note) : ''}</textarea>
         <div class="action-buttons">
-          <button id="btn-approve" class="btn btn-approve" type="button"><span>✓</span> Approve</button>
-          <button id="btn-reject" class="btn btn-reject" type="button"><span>✕</span> Reject</button>
+          <button id="btn-approve" class="btn btn-approve" type="button">Approve</button>
+          <button id="btn-reject" class="btn btn-reject" type="button">Reject</button>
         </div>
       </div>` : `
       <div class="final-notice">
-        <span>🔒</span>
         <span>Decision is final (${STATUS_LABELS[invoice.status]}). Status cannot be changed.</span>
       </div>`}
   `;
@@ -291,10 +286,9 @@ async function fetchInvoices() {
     const container = document.getElementById('invoices-container');
     container.innerHTML = `
       <div class="state-container">
-        <div class="state-icon">⚠️</div>
         <div class="state-title">Error loading invoices</div>
         <div class="state-desc">${esc(err.message)}</div>
-        <button id="btn-retry" class="btn btn-icon" style="margin-top: 12px;">Retry</button>
+        <button id="btn-retry" class="btn" style="margin-top: 12px; background: var(--bg-surface); border: 1px solid var(--border-light);">Retry</button>
       </div>`;
     document.getElementById('btn-retry')?.addEventListener('click', fetchInvoices);
     showToast(err.message, 'error');
@@ -324,22 +318,73 @@ function setupTabs() {
   });
 }
 
-function setupTheme() {
-  const toggleBtn = document.getElementById('btn-theme-toggle');
-  const storedTheme = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const currentTheme = storedTheme || (prefersDark ? 'dark' : 'light');
+function openModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const errorEl = document.getElementById('modal-error');
+  if (errorEl) errorEl.classList.add('hidden');
+  document.getElementById('add-invoice-form')?.reset();
+  overlay?.classList.remove('hidden');
+  document.getElementById('inv-vendor')?.focus();
+}
 
-  document.documentElement.setAttribute('data-theme', currentTheme);
-  const icon = document.getElementById('theme-icon');
-  if (icon) icon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+function closeModal() {
+  document.getElementById('modal-overlay')?.classList.add('hidden');
+}
 
-  toggleBtn?.addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-    if (icon) icon.textContent = next === 'dark' ? '☀️' : '🌙';
+function setupModal() {
+  document.getElementById('btn-add-invoice')?.addEventListener('click', openModal);
+  document.getElementById('modal-close')?.addEventListener('click', closeModal);
+  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  const form = document.getElementById('add-invoice-form');
+  const errorEl = document.getElementById('modal-error');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errorEl) errorEl.classList.add('hidden');
+
+    const vendor = document.getElementById('inv-vendor')?.value.trim();
+    const invoice_number = document.getElementById('inv-number')?.value.trim();
+    const amountVal = parseFloat(document.getElementById('inv-amount')?.value);
+    const issue_date = document.getElementById('inv-date')?.value;
+    const amount_cents = Math.round(amountVal * 100);
+
+    const submitBtn = document.getElementById('modal-submit');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor, invoice_number, amount_cents, issue_date }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create invoice');
+
+      closeModal();
+      showToast(`Invoice #${data.invoice_number} created successfully!`, 'success');
+
+      const targetTab = data.status === 'needs_review' ? 'needs_review' : 'processing';
+      currentTab = targetTab;
+      selectedInvoiceId = data.id;
+      document.querySelectorAll('.tab-btn').forEach((t) => {
+        t.setAttribute('aria-selected', t.dataset.tab === targetTab ? 'true' : 'false');
+      });
+
+      await fetchInvoices();
+    } catch (err) {
+      if (errorEl) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+      showToast(err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
   });
 }
 
@@ -353,7 +398,7 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
-setupTheme();
 setupTabs();
-document.getElementById('btn-refresh')?.addEventListener('click', fetchInvoices);
+setupModal();
 fetchInvoices();
+

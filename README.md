@@ -13,8 +13,8 @@ npm test
 ```
 
 Additional scripts:
-- `npm run build` — Compiles TypeScript to `dist/`.
-- `npm start` — Runs the compiled production server.
+- `npm run build`: Compiles TypeScript to `dist/`.
+- `npm start`: Runs the compiled production server.
 
 ## UI
 - **Three queue tabs with live counts:**

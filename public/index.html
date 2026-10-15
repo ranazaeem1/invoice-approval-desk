@@ -9,27 +9,25 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
     <header class="app-header">
       <div class="brand-wrapper">
-        <div class="brand-icon" aria-hidden="true">🧾</div>
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+        </div>
         <div>
           <h1 class="brand-title">Invoice Approval Desk</h1>
-          <p class="brand-subtitle">Accounts Payable • Review incoming invoices and eliminate duplicate payouts</p>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="btn-refresh" class="btn-icon" type="button" title="Refresh queue">
-          <span aria-hidden="true">🔄</span>
-          <span>Refresh</span>
-        </button>
-        <button id="btn-theme-toggle" class="btn-icon" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">
-          <span id="theme-icon" aria-hidden="true">🌙</span>
-        </button>
+      <div>
+        <button id="btn-add-invoice" class="btn btn-primary" type="button">Add invoice</button>
       </div>
     </header>
 
-    <!-- Tabs Navigation -->
     <nav class="tabs-nav" role="tablist" aria-label="Invoice status tabs">
       <button 
         id="tab-processing" 
@@ -66,9 +64,7 @@
       </button>
     </nav>
 
-    <!-- Main Content Area: Master List + Detail Panel -->
     <main class="main-content">
-      <!-- Invoices List Card -->
       <section class="content-card" aria-label="Invoices list card">
         <div id="invoices-container">
           <div class="state-container">
@@ -78,10 +74,8 @@
         </div>
       </section>
 
-      <!-- Detail Panel -->
       <aside class="detail-panel" id="detail-panel" aria-label="Invoice details">
         <div class="state-container">
-          <div class="state-icon">📄</div>
           <div class="state-title">No invoice selected</div>
           <div class="state-desc">Select an invoice from the queue to view its details, review duplicate alerts, or approve/reject.</div>
         </div>
@@ -89,7 +83,38 @@
     </main>
   </div>
 
-  <!-- Floating Toast Notifications -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title">Add invoice</h2>
+        <button id="modal-close" class="modal-close-btn" type="button" aria-label="Close">&times;</button>
+      </div>
+      <form id="add-invoice-form">
+        <div id="modal-error" class="form-error hidden"></div>
+        <div class="form-group">
+          <label for="inv-vendor" class="form-label">Vendor</label>
+          <input id="inv-vendor" class="form-input" type="text" required placeholder="e.g. Acme Corp">
+        </div>
+        <div class="form-group">
+          <label for="inv-number" class="form-label">Invoice number</label>
+          <input id="inv-number" class="form-input" type="text" required placeholder="e.g. INV-1001">
+        </div>
+        <div class="form-group">
+          <label for="inv-amount" class="form-label">Amount ($)</label>
+          <input id="inv-amount" class="form-input" type="number" step="0.01" min="0" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="inv-date" class="form-label">Issue date</label>
+          <input id="inv-date" class="form-input" type="date" required>
+        </div>
+        <div class="modal-actions">
+          <button id="modal-cancel" class="btn btn-secondary" type="button">Cancel</button>
+          <button id="modal-submit" class="btn btn-primary" type="submit">Create invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/app.js"></script>

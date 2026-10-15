@@ -39,6 +39,35 @@ export function createApp(db: Database.Database = getDatabase()) {
     res.json(db.prepare('SELECT * FROM invoices ORDER BY issue_date DESC, id DESC').all());
   });
 
+  app.post('/api/invoices', (req, res) => {
+    const { vendor, invoice_number, amount_cents, issue_date } = req.body || {};
+
+    if (
+      !vendor || typeof vendor !== 'string' || !vendor.trim() ||
+      !invoice_number || typeof invoice_number !== 'string' || !invoice_number.trim() ||
+      typeof amount_cents !== 'number' || !Number.isInteger(amount_cents) || amount_cents < 0 ||
+      !issue_date || typeof issue_date !== 'string' || !issue_date.trim() || Number.isNaN(Date.parse(issue_date))
+    ) {
+      res.status(400).json({ error: 'Invalid invoice data' });
+      return;
+    }
+
+    const match = db.prepare(
+      'SELECT id FROM invoices WHERE vendor = ? AND invoice_number = ? AND amount_cents = ? ORDER BY id ASC LIMIT 1'
+    ).get(vendor.trim(), invoice_number.trim(), amount_cents) as { id: number } | undefined;
+
+    const duplicate_of = match ? match.id : null;
+    const status = duplicate_of ? 'needs_review' : 'processing';
+
+    const info = db.prepare(`
+      INSERT INTO invoices (vendor, invoice_number, amount_cents, issue_date, status, duplicate_of)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(vendor.trim(), invoice_number.trim(), amount_cents, issue_date.trim(), status, duplicate_of);
+
+    const created = db.prepare('SELECT * FROM invoices WHERE id = ?').get(info.lastInsertRowid);
+    res.status(201).json(created);
+  });
+
   app.get('/api/invoices/:id', (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {

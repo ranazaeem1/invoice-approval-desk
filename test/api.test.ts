@@ -84,6 +84,84 @@ describe('Invoice Approval Desk API', () => {
     });
   });
 
+  describe('POST /api/invoices', () => {
+    it('creates an invoice with status processing when no duplicate exists', async () => {
+      const res = await fetch(`${baseUrl}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: 'Acme Corp',
+          invoice_number: 'ACM-001',
+          amount_cents: 50000,
+          issue_date: '2026-10-15',
+        }),
+      });
+      assert.equal(res.status, 201);
+      const invoice = (await res.json()) as any;
+      assert.equal(invoice.vendor, 'Acme Corp');
+      assert.equal(invoice.invoice_number, 'ACM-001');
+      assert.equal(invoice.amount_cents, 50000);
+      assert.equal(invoice.status, 'processing');
+      assert.equal(invoice.duplicate_of, null);
+    });
+
+    it('sets duplicate_of and status needs_review when matching invoice exists', async () => {
+      // Invoice 1 is seeded: Northwind Supplies, NW-1041, 124050
+      const res = await fetch(`${baseUrl}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: 'Northwind Supplies',
+          invoice_number: 'NW-1041',
+          amount_cents: 124050,
+          issue_date: '2026-10-14',
+        }),
+      });
+      assert.equal(res.status, 201);
+      const invoice = (await res.json()) as any;
+      assert.equal(invoice.status, 'needs_review');
+      assert.equal(invoice.duplicate_of, 1);
+    });
+
+    it('returns 400 when required fields are missing or invalid', async () => {
+      const res1 = await fetch(`${baseUrl}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: '',
+          invoice_number: 'INV-1',
+          amount_cents: 1000,
+          issue_date: '2026-10-15',
+        }),
+      });
+      assert.equal(res1.status, 400);
+
+      const res2 = await fetch(`${baseUrl}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: 'Acme',
+          invoice_number: 'INV-1',
+          amount_cents: -50,
+          issue_date: '2026-10-15',
+        }),
+      });
+      assert.equal(res2.status, 400);
+
+      const res3 = await fetch(`${baseUrl}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: 'Acme',
+          invoice_number: 'INV-1',
+          amount_cents: 1000,
+          issue_date: 'invalid-date',
+        }),
+      });
+      assert.equal(res3.status, 400);
+    });
+  });
+
   describe('GET /api/invoices/:id', () => {
     it('returns a single invoice by id', async () => {
       const res = await fetch(`${baseUrl}/api/invoices/1`);
