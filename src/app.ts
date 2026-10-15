@@ -1,56 +1,52 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import Database from 'better-sqlite3';
 import { getDatabase, Invoice, InvoiceStatus, INVOICE_STATUSES, TRANSITIONS } from './db';
 
-export function createApp(db: Database.Database = getDatabase()): express.Application {
-  const app = express();
+function parseId(param: unknown) {
+  const id = parseInt(Array.isArray(param) ? param[0] : (param as string), 10);
+  return Number.isNaN(id) || id < 1 ? null : id;
+}
 
+export function createApp(db: Database.Database = getDatabase()) {
+  const app = express();
   app.use(express.json());
 
-  // GET /api/invoices
-  // Query: status (optional, comma-separated). Returns array ordered by issue_date desc.
-  app.get('/api/invoices', (req: Request, res: Response) => {
-    const statusQuery = req.query.status;
+  app.get('/api/invoices', (req, res) => {
+    const { status } = req.query;
 
-    if (statusQuery !== undefined) {
-      if (typeof statusQuery !== 'string' || statusQuery.trim() === '') {
+    if (status !== undefined) {
+      if (typeof status !== 'string' || !status.trim()) {
         res.status(400).json({ error: 'Invalid status query parameter' });
         return;
       }
 
-      const statuses = statusQuery.split(',').map((s) => s.trim());
-      for (const s of statuses) {
+      const list = status.split(',').map((s) => s.trim());
+      for (const s of list) {
         if (!INVOICE_STATUSES.includes(s as InvoiceStatus)) {
           res.status(400).json({ error: `Unknown status: '${s}'` });
           return;
         }
       }
 
-      const placeholders = statuses.map(() => '?').join(',');
-      const stmt = db.prepare(
+      const placeholders = list.map(() => '?').join(',');
+      const rows = db.prepare(
         `SELECT * FROM invoices WHERE status IN (${placeholders}) ORDER BY issue_date DESC, id DESC`
-      );
-      const rows = stmt.all(...statuses) as Invoice[];
+      ).all(...list);
       res.json(rows);
       return;
     }
 
-    const stmt = db.prepare('SELECT * FROM invoices ORDER BY issue_date DESC, id DESC');
-    const rows = stmt.all() as Invoice[];
-    res.json(rows);
+    res.json(db.prepare('SELECT * FROM invoices ORDER BY issue_date DESC, id DESC').all());
   });
 
-  // GET /api/invoices/:id
-  // Returns one invoice. 404 if missing.
-  app.get('/api/invoices/:id', (req: Request, res: Response) => {
-    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const id = parseInt(rawId, 10);
-    if (Number.isNaN(id) || id < 1) {
+  app.get('/api/invoices/:id', (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
       res.status(400).json({ error: 'Invalid invoice ID' });
       return;
     }
 
-    const row = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as Invoice | undefined;
+    const row = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
     if (!row) {
       res.status(404).json({ error: 'Invoice not found' });
       return;
@@ -59,12 +55,9 @@ export function createApp(db: Database.Database = getDatabase()): express.Applic
     res.json(row);
   });
 
-  // PATCH /api/invoices/:id/status
-  // Body: { "status": "approved", "note": "optional" }
-  app.patch('/api/invoices/:id/status', (req: Request, res: Response) => {
-    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const id = parseInt(rawId, 10);
-    if (Number.isNaN(id) || id < 1) {
+  app.patch('/api/invoices/:id/status', (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
       res.status(400).json({ error: 'Invalid invoice ID' });
       return;
     }
@@ -81,37 +74,32 @@ export function createApp(db: Database.Database = getDatabase()): express.Applic
       return;
     }
 
-    const existing = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as Invoice | undefined;
-    if (!existing) {
+    const row = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as Invoice | undefined;
+    if (!row) {
       res.status(404).json({ error: 'Invoice not found' });
       return;
     }
 
-    const allowedTransitions = TRANSITIONS[existing.status];
-    if (!allowedTransitions.includes(status as InvoiceStatus)) {
-      res.status(409).json({
-        error: `Cannot transition status from '${existing.status}' to '${status}'`,
-      });
+    if (!TRANSITIONS[row.status].includes(status as InvoiceStatus)) {
+      res.status(409).json({ error: `Cannot transition status from '${row.status}' to '${status}'` });
       return;
     }
 
-    const newNote = note !== undefined ? note : existing.note;
+    const newNote = note !== undefined ? note : row.note;
     db.prepare(`
       UPDATE invoices
       SET status = ?, note = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(status, newNote, id);
 
-    const updated = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as Invoice;
-    res.json(updated);
+    res.json(db.prepare('SELECT * FROM invoices WHERE id = ?').get(id));
   });
 
-  // Fallback 404 for unknown api routes
-  app.use('/api', (req: Request, res: Response) => {
+  app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'API endpoint not found' });
   });
 
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err.type === 'entity.parse.failed') {
       res.status(400).json({ error: 'Invalid JSON body' });
       return;

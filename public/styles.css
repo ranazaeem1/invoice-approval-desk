@@ -1,26 +1,19 @@
-/* ==========================================================================
-   Design Tokens & Theme Variables
-   ========================================================================== */
 :root {
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Light Theme */
   --bg-page: #f8fafc;
   --bg-surface: #ffffff;
   --bg-surface-hover: #f1f5f9;
-  --bg-surface-active: #e2e8f0;
   --bg-subtle: #f1f5f9;
   
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --text-inverse: #ffffff;
 
   --border-light: #e2e8f0;
   --border-focus: #3b82f6;
 
   --primary: #2563eb;
-  --primary-hover: #1d4ed8;
   --primary-subtle: #eff6ff;
 
   --success: #10b981;
@@ -35,13 +28,11 @@
   --danger-border: #fecaca;
   --danger-text: #991b1b;
 
-  --warning: #f59e0b;
   --warning-subtle: #fffbeb;
   --warning-border: #fde68a;
   --warning-text: #92400e;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   
   --radius-sm: 6px;
@@ -57,45 +48,35 @@
   --bg-page: #090d16;
   --bg-surface: #111827;
   --bg-surface-hover: #1f293d;
-  --bg-surface-active: #28354d;
   --bg-subtle: #172033;
 
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  --text-inverse: #0f172a;
 
   --border-light: #1f2937;
   --border-focus: #60a5fa;
 
   --primary: #3b82f6;
-  --primary-hover: #60a5fa;
   --primary-subtle: #1e293b;
 
-  --success: #10b981;
   --success-hover: #34d399;
   --success-subtle: #064e3b33;
   --success-border: #065f46;
   --success-text: #6ee7b7;
 
-  --danger: #ef4444;
   --danger-hover: #f87171;
   --danger-subtle: #450a0a33;
   --danger-border: #7f1d1d;
   --danger-text: #fca5a5;
 
-  --warning: #f59e0b;
   --warning-subtle: #451a0333;
   --warning-border: #78350f;
   --warning-text: #fcd34d;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
 }
 
-/* ==========================================================================
-   Base & Reset
-   ========================================================================== */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -112,13 +93,12 @@ body {
   transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
-/* Accessible keyboard focus */
 :focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
 
-button, input, select, textarea {
+button, input, textarea {
   font: inherit;
 }
 
@@ -128,9 +108,6 @@ button {
   background: none;
 }
 
-/* ==========================================================================
-   Layout
-   ========================================================================== */
 .app-container {
   max-width: 1380px;
   margin: 0 auto;
@@ -140,7 +117,6 @@ button {
   gap: 24px;
 }
 
-/* Header */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -165,7 +141,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: #fff;
   font-size: 22px;
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
 }
@@ -209,7 +185,6 @@ button {
   border-color: var(--border-focus);
 }
 
-/* Tabs */
 .tabs-nav {
   display: flex;
   gap: 8px;
@@ -259,10 +234,9 @@ button {
 
 .tab-btn[aria-selected="true"] .tab-badge {
   background: var(--primary);
-  color: #ffffff;
+  color: #fff;
 }
 
-/* Main Grid Layout: List + Detail */
 .main-content {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
@@ -276,7 +250,6 @@ button {
   }
 }
 
-/* Table Section Card */
 .content-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
@@ -359,7 +332,6 @@ button {
   white-space: nowrap;
 }
 
-/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -409,7 +381,6 @@ button {
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: 2px 7px;
-  box-shadow: 0 1px 2px rgba(225, 29, 72, 0.1);
 }
 [data-theme="dark"] .badge-duplicate {
   background: #4c051944;
@@ -417,7 +388,6 @@ button {
   border-color: #9f1239;
 }
 
-/* Detail Panel */
 .detail-panel {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
@@ -454,7 +424,6 @@ button {
   margin-top: 2px;
 }
 
-/* Duplicate Alert Banner */
 .duplicate-banner {
   background: var(--danger-subtle);
   border: 1px solid var(--danger-border);
@@ -475,7 +444,6 @@ button {
   line-height: 1;
 }
 
-/* Detail Properties List */
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -509,7 +477,6 @@ button {
   color: var(--primary);
 }
 
-/* Action Form */
 .action-box {
   margin-top: 8px;
   padding-top: 16px;
@@ -569,7 +536,7 @@ button {
 
 .btn-approve {
   background: var(--success);
-  color: #ffffff;
+  color: #fff;
 }
 .btn-approve:hover:not(:disabled) {
   background: var(--success-hover);
@@ -578,7 +545,7 @@ button {
 
 .btn-reject {
   background: var(--danger);
-  color: #ffffff;
+  color: #fff;
 }
 .btn-reject:hover:not(:disabled) {
   background: var(--danger-hover);
@@ -597,7 +564,6 @@ button {
   font-weight: 500;
 }
 
-/* Empty & Loading & Error States */
 .state-container {
   display: flex;
   flex-direction: column;
@@ -643,7 +609,6 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Toast Notifications */
 #toast-container {
   position: fixed;
   bottom: 24px;

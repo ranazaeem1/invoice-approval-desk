@@ -1,17 +1,16 @@
 import Database from 'better-sqlite3';
-import path from 'path';
 import { seedDatabase } from './seed';
 
 export type InvoiceStatus = 'processing' | 'needs_review' | 'approved' | 'rejected';
 
-export const INVOICE_STATUSES: readonly InvoiceStatus[] = [
+export const INVOICE_STATUSES: InvoiceStatus[] = [
   'processing',
   'needs_review',
   'approved',
   'rejected',
-] as const;
+];
 
-export const TRANSITIONS: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
+export const TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
   processing: ['needs_review', 'approved', 'rejected'],
   needs_review: ['approved', 'rejected'],
   approved: [],
@@ -32,9 +31,7 @@ export interface Invoice {
   updated_at: string;
 }
 
-const DEFAULT_DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'invoices.db');
-
-export function createDatabase(dbPath: string = DEFAULT_DB_PATH): Database.Database {
+export function createDatabase(dbPath = process.env.DB_PATH || 'invoices.db') {
   const db = new Database(dbPath);
   db.pragma('foreign_keys = ON');
   db.pragma('journal_mode = WAL');
@@ -59,18 +56,13 @@ export function createDatabase(dbPath: string = DEFAULT_DB_PATH): Database.Datab
   `);
 
   seedDatabase(db, false);
-
   return db;
 }
 
 let dbInstance: Database.Database | null = null;
 
-export function getDatabase(dbPath?: string): Database.Database {
-  if (dbPath) {
-    return createDatabase(dbPath);
-  }
-  if (!dbInstance) {
-    dbInstance = createDatabase();
-  }
+export function getDatabase(dbPath?: string) {
+  if (dbPath) return createDatabase(dbPath);
+  if (!dbInstance) dbInstance = createDatabase();
   return dbInstance;
 }
