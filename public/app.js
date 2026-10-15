@@ -2,6 +2,7 @@ let allInvoices = [];
 let currentTab = 'processing';
 let selectedInvoiceId = null;
 let isLoading = false;
+let currentFetchId = 0;
 
 const STATUS_LABELS = {
   processing: 'Processing',
@@ -259,6 +260,7 @@ async function updateStatus(id, newStatus, note) {
 }
 
 async function fetchInvoices() {
+  const fetchId = ++currentFetchId;
   isLoading = true;
   renderInvoicesTable();
 
@@ -268,7 +270,11 @@ async function fetchInvoices() {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || 'Failed to load invoices');
     }
-    allInvoices = await res.json();
+    const data = await res.json();
+    if (fetchId !== currentFetchId) return;
+
+    allInvoices = data;
+    isLoading = false;
 
     if (selectedInvoiceId && !allInvoices.some((i) => i.id === selectedInvoiceId)) {
       selectedInvoiceId = null;
@@ -283,17 +289,23 @@ async function fetchInvoices() {
     renderInvoicesTable();
     renderDetailPanel();
   } catch (err) {
+    if (fetchId !== currentFetchId) return;
+    isLoading = false;
     const container = document.getElementById('invoices-container');
-    container.innerHTML = `
-      <div class="state-container">
-        <div class="state-title">Error loading invoices</div>
-        <div class="state-desc">${esc(err.message)}</div>
-        <button id="btn-retry" class="btn" style="margin-top: 12px; background: var(--bg-surface); border: 1px solid var(--border-light);">Retry</button>
-      </div>`;
-    document.getElementById('btn-retry')?.addEventListener('click', fetchInvoices);
+    if (container) {
+      container.innerHTML = `
+        <div class="state-container">
+          <div class="state-title">Error loading invoices</div>
+          <div class="state-desc">${esc(err.message)}</div>
+          <button id="btn-retry" class="btn" style="margin-top: 12px; background: var(--bg-surface); border: 1px solid var(--border-light);">Retry</button>
+        </div>`;
+      document.getElementById('btn-retry')?.addEventListener('click', fetchInvoices);
+    }
     showToast(err.message, 'error');
   } finally {
-    isLoading = false;
+    if (fetchId === currentFetchId) {
+      isLoading = false;
+    }
   }
 }
 
