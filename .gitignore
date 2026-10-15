@@ -1,8 +1,75 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Build & Compilation outputs
 dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment variables & Sensitive Credentials
+.env
+.env.*
+!.env.example
+*.env
+*.local
+*.secret
+*.pem
+*.key
+*.cert
+*.pfx
+credentials.json
+token.json
+
+# SQLite Databases & Local Storage
 *.db
+*.db-*
 *.db-journal
 *.db-shm
 *.db-wal
-.env
+*.sqlite
+*.sqlite3
+
+# Logs & Error Dumps
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Operating System Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# IDE & Editor Directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.sublime-project
+*.sublime-workspace
+
+# AI & Agent Workspace Caches
+.gemini/
+.agents/
+.cursor/
+
+# Temporary Files & Caches
+.cache/
+.temp/
+.tmp/
+*.tmp
+*.temp
